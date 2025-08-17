@@ -3,7 +3,7 @@ version: '3.9'
 services:
   db:
     image: postgres:16
-    container_name: social-mvp-db
+    container_name: muras-backend-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -24,8 +24,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: social-mvp:latest
-    container_name: social-mvp
+    image: muras-backend:latest
+    container_name: muras-backend
     environment:
       PORT: "8080"
       ALLOW_CORS: "true"

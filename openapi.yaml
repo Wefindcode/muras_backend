@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Social MVP API
+  title: Muras Backend API
   version: 1.0.0
 servers:
   - url: /

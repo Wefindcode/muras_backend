@@ -1,4 +1,4 @@
-## Social MVP (Golang)
+## Muras Backend (Golang)
 
 Backend: PostgreSQL, JWT-авторизация админа, управление постами и пользователями, парсер RSS/Atom в фоне.
 
