@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"time"
 )
@@ -18,11 +17,11 @@ type User struct {
 }
 
 type UserService struct {
-	db             *sql.DB
+	db             DB
 	passwordHasher *PasswordHasher
 }
 
-func NewUserService(db *sql.DB, hasher *PasswordHasher) *UserService {
+func NewUserService(db DB, hasher *PasswordHasher) *UserService {
 	return &UserService{db: db, passwordHasher: hasher}
 }
 
@@ -47,6 +46,12 @@ func (s *UserService) GetByID(ctx context.Context, id int64) (*User, error) {
 func (s *UserService) Create(ctx context.Context, email, password string, isAdmin bool) (*User, error) {
 	hash, err := s.passwordHasher.HashPassword(password)
 	if err != nil { return nil, err }
+	if s.db.Driver() == "postgres" {
+		var id int64
+		row := s.db.QueryRowContext(ctx, "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?) RETURNING id", email, hash, isAdmin)
+		if err := row.Scan(&id); err != nil { return nil, err }
+		return s.GetByID(ctx, id)
+	}
 	res, err := s.db.ExecContext(ctx, "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?)", email, hash, isAdmin)
 	if err != nil { return nil, err }
 	id, _ := res.LastInsertId()
@@ -77,11 +82,17 @@ type Post struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
-type PostService struct { db *sql.DB }
+type PostService struct { db DB }
 
-func NewPostService(db *sql.DB) *PostService { return &PostService{db: db} }
+func NewPostService(db DB) *PostService { return &PostService{db: db} }
 
 func (s *PostService) Create(ctx context.Context, title, content string, source *string, publishedAt *time.Time) (*Post, error) {
+	if s.db.Driver() == "postgres" {
+		var id int64
+		row := s.db.QueryRowContext(ctx, "INSERT INTO posts (title, content, source, published_at) VALUES (?, ?, ?, ?) RETURNING id", title, content, source, publishedAt)
+		if err := row.Scan(&id); err != nil { return nil, err }
+		return s.GetByID(ctx, id)
+	}
 	res, err := s.db.ExecContext(ctx, "INSERT INTO posts (title, content, source, published_at) VALUES (?, ?, ?, ?)", title, content, source, publishedAt)
 	if err != nil { return nil, err }
 	id, _ := res.LastInsertId()
@@ -129,11 +140,17 @@ type Feed struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type FeedService struct { db *sql.DB }
+type FeedService struct { db DB }
 
-func NewFeedService(db *sql.DB) *FeedService { return &FeedService{db: db} }
+func NewFeedService(db DB) *FeedService { return &FeedService{db: db} }
 
 func (s *FeedService) Create(ctx context.Context, url string) (*Feed, error) {
+	if s.db.Driver() == "postgres" {
+		var id int64
+		row := s.db.QueryRowContext(ctx, "INSERT INTO feeds (url, enabled) VALUES (?, TRUE) RETURNING id", url)
+		if err := row.Scan(&id); err != nil { return nil, err }
+		return s.GetByID(ctx, id)
+	}
 	res, err := s.db.ExecContext(ctx, "INSERT INTO feeds (url, enabled) VALUES (?, 1)", url)
 	if err != nil { return nil, err }
 	id, _ := res.LastInsertId()

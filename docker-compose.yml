@@ -10,10 +10,15 @@ services:
     environment:
       PORT: "8080"
       ALLOW_CORS: "true"
+      # Для SQLite (по умолчанию):
+      DB_DRIVER: "sqlite"
       DATABASE_URL: "file:/data/app.db?_foreign_keys=on"
       JWT_SECRET: "change-me-in-prod"
       DEFAULT_ADMIN_EMAIL: "admin@example.com"
       DEFAULT_ADMIN_PASSWORD: "admin123"
+      # Для PostgreSQL используйте override-файл (см. README):
+      # DB_DRIVER: "postgres"
+      # DATABASE_URL: "postgres://postgres:postgres@db:5432/social?sslmode=disable"
     ports:
       - "8080:8080"
     volumes:
