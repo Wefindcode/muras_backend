@@ -16,15 +16,15 @@ import (
 func main() {
 	cfg := loadConfig()
 
-	dbConn, driver, err := openDatabase(cfg)
+	dbConn, err := openDatabase(cfg)
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
 	defer dbConn.Close()
 
-	db := NewDBAdapter(dbConn, driver)
+	db := NewDBAdapter(dbConn)
 
-	if err := migrate(db, driver); err != nil {
+	if err := migrate(db); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
 	}
 

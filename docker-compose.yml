@@ -1,6 +1,19 @@
 version: '3.9'
 
 services:
+  db:
+    image: postgres:16
+    container_name: social-mvp-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: social
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
   app:
     build:
       context: .
@@ -10,26 +23,15 @@ services:
     environment:
       PORT: "8080"
       ALLOW_CORS: "true"
-      # Для SQLite (по умолчанию):
-      DB_DRIVER: "sqlite"
-      DATABASE_URL: "file:/data/app.db?_foreign_keys=on"
+      DATABASE_URL: "postgres://postgres:postgres@db:5432/social?sslmode=disable"
       JWT_SECRET: "change-me-in-prod"
       DEFAULT_ADMIN_EMAIL: "admin@example.com"
       DEFAULT_ADMIN_PASSWORD: "admin123"
-      # Для PostgreSQL используйте override-файл (см. README):
-      # DB_DRIVER: "postgres"
-      # DATABASE_URL: "postgres://postgres:postgres@db:5432/social?sslmode=disable"
     ports:
       - "8080:8080"
-    volumes:
-      - appdata:/data
+    depends_on:
+      - db
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
 
 volumes:
-  appdata:
+  pgdata:
