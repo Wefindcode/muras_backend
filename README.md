@@ -39,6 +39,10 @@ curl http://localhost:8080/healthz
 - `db` — Postgres 16 (порт 5432), volume `pgdata`
 - `app` — приложение на Go (порт 8080), использует `DATABASE_URL` c `db`
 
+### Swagger UI и схема API
+- Swagger UI: `http://localhost:8080/docs`
+- OpenAPI: `http://localhost:8080/openapi.yaml`
+
 ### Примеры API
 ```bash
 # Логин
