@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: social-mvp:latest
+    container_name: social-mvp
+    environment:
+      PORT: "8080"
+      ALLOW_CORS: "true"
+      DATABASE_URL: "file:/data/app.db?_foreign_keys=on"
+      JWT_SECRET: "change-me-in-prod"
+      DEFAULT_ADMIN_EMAIL: "admin@example.com"
+      DEFAULT_ADMIN_PASSWORD: "admin123"
+    ports:
+      - "8080:8080"
+    volumes:
+      - appdata:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  appdata:
