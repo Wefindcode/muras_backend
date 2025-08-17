@@ -76,6 +76,9 @@ func main() {
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
+	// OpenAPI + Swagger UI
+	r.Get("/openapi.yaml", ServeOpenAPI)
+	r.Get("/docs", ServeSwaggerUI)
 
 	// Auth
 	authHandler := NewAuthHandler(userService, jwtManager)
