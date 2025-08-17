@@ -26,7 +26,7 @@ func NewUserService(db DB, hasher *PasswordHasher) *UserService {
 }
 
 func (s *UserService) GetByEmail(ctx context.Context, email string) (*User, error) {
-	row := s.db.QueryRowContext(ctx, "SELECT id, email, password_hash, is_admin, created_at FROM users WHERE email = ?", email)
+	row := s.db.QueryRowContext(ctx, "SELECT id, email, password_hash, is_admin, created_at FROM users WHERE email = $1", email)
 	u := &User{}
 	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.IsAdmin, &u.CreatedAt); err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (s *UserService) GetByEmail(ctx context.Context, email string) (*User, erro
 }
 
 func (s *UserService) GetByID(ctx context.Context, id int64) (*User, error) {
-	row := s.db.QueryRowContext(ctx, "SELECT id, email, password_hash, is_admin, created_at FROM users WHERE id = ?", id)
+	row := s.db.QueryRowContext(ctx, "SELECT id, email, password_hash, is_admin, created_at FROM users WHERE id = $1", id)
 	u := &User{}
 	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.IsAdmin, &u.CreatedAt); err != nil {
 		return nil, err
@@ -46,15 +46,9 @@ func (s *UserService) GetByID(ctx context.Context, id int64) (*User, error) {
 func (s *UserService) Create(ctx context.Context, email, password string, isAdmin bool) (*User, error) {
 	hash, err := s.passwordHasher.HashPassword(password)
 	if err != nil { return nil, err }
-	if s.db.Driver() == "postgres" {
-		var id int64
-		row := s.db.QueryRowContext(ctx, "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?) RETURNING id", email, hash, isAdmin)
-		if err := row.Scan(&id); err != nil { return nil, err }
-		return s.GetByID(ctx, id)
-	}
-	res, err := s.db.ExecContext(ctx, "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?)", email, hash, isAdmin)
-	if err != nil { return nil, err }
-	id, _ := res.LastInsertId()
+	var id int64
+	row := s.db.QueryRowContext(ctx, "INSERT INTO users (email, password_hash, is_admin) VALUES ($1, $2, $3) RETURNING id", email, hash, isAdmin)
+	if err := row.Scan(&id); err != nil { return nil, err }
 	return s.GetByID(ctx, id)
 }
 
@@ -87,30 +81,24 @@ type PostService struct { db DB }
 func NewPostService(db DB) *PostService { return &PostService{db: db} }
 
 func (s *PostService) Create(ctx context.Context, title, content string, source *string, publishedAt *time.Time) (*Post, error) {
-	if s.db.Driver() == "postgres" {
-		var id int64
-		row := s.db.QueryRowContext(ctx, "INSERT INTO posts (title, content, source, published_at) VALUES (?, ?, ?, ?) RETURNING id", title, content, source, publishedAt)
-		if err := row.Scan(&id); err != nil { return nil, err }
-		return s.GetByID(ctx, id)
-	}
-	res, err := s.db.ExecContext(ctx, "INSERT INTO posts (title, content, source, published_at) VALUES (?, ?, ?, ?)", title, content, source, publishedAt)
-	if err != nil { return nil, err }
-	id, _ := res.LastInsertId()
+	var id int64
+	row := s.db.QueryRowContext(ctx, "INSERT INTO posts (title, content, source, published_at) VALUES ($1, $2, $3, $4) RETURNING id", title, content, source, publishedAt)
+	if err := row.Scan(&id); err != nil { return nil, err }
 	return s.GetByID(ctx, id)
 }
 
 func (s *PostService) Update(ctx context.Context, id int64, title, content string) error {
-	_, err := s.db.ExecContext(ctx, "UPDATE posts SET title = ?, content = ? WHERE id = ?", title, content, id)
+	_, err := s.db.ExecContext(ctx, "UPDATE posts SET title = $1, content = $2 WHERE id = $3", title, content, id)
 	return err
 }
 
 func (s *PostService) Delete(ctx context.Context, id int64) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM posts WHERE id = ?", id)
+	_, err := s.db.ExecContext(ctx, "DELETE FROM posts WHERE id = $1", id)
 	return err
 }
 
 func (s *PostService) GetByID(ctx context.Context, id int64) (*Post, error) {
-	row := s.db.QueryRowContext(ctx, "SELECT id, title, content, source, published_at, created_at FROM posts WHERE id = ?", id)
+	row := s.db.QueryRowContext(ctx, "SELECT id, title, content, source, published_at, created_at FROM posts WHERE id = $1", id)
 	p := &Post{}
 	if err := row.Scan(&p.ID, &p.Title, &p.Content, &p.Source, &p.PublishedAt, &p.CreatedAt); err != nil {
 		return nil, err
@@ -119,7 +107,7 @@ func (s *PostService) GetByID(ctx context.Context, id int64) (*Post, error) {
 }
 
 func (s *PostService) List(ctx context.Context, limit, offset int) ([]*Post, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, title, content, source, published_at, created_at FROM posts ORDER BY id DESC LIMIT ? OFFSET ?", limit, offset)
+	rows, err := s.db.QueryContext(ctx, "SELECT id, title, content, source, published_at, created_at FROM posts ORDER BY id DESC LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var posts []*Post
@@ -145,25 +133,19 @@ type FeedService struct { db DB }
 func NewFeedService(db DB) *FeedService { return &FeedService{db: db} }
 
 func (s *FeedService) Create(ctx context.Context, url string) (*Feed, error) {
-	if s.db.Driver() == "postgres" {
-		var id int64
-		row := s.db.QueryRowContext(ctx, "INSERT INTO feeds (url, enabled) VALUES (?, TRUE) RETURNING id", url)
-		if err := row.Scan(&id); err != nil { return nil, err }
-		return s.GetByID(ctx, id)
-	}
-	res, err := s.db.ExecContext(ctx, "INSERT INTO feeds (url, enabled) VALUES (?, 1)", url)
-	if err != nil { return nil, err }
-	id, _ := res.LastInsertId()
+	var id int64
+	row := s.db.QueryRowContext(ctx, "INSERT INTO feeds (url, enabled) VALUES ($1, TRUE) RETURNING id", url)
+	if err := row.Scan(&id); err != nil { return nil, err }
 	return s.GetByID(ctx, id)
 }
 
 func (s *FeedService) Delete(ctx context.Context, id int64) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM feeds WHERE id = ?", id)
+	_, err := s.db.ExecContext(ctx, "DELETE FROM feeds WHERE id = $1", id)
 	return err
 }
 
 func (s *FeedService) List(ctx context.Context) ([]*Feed, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, url, enabled, created_at FROM feeds WHERE enabled = 1 ORDER BY id DESC")
+	rows, err := s.db.QueryContext(ctx, "SELECT id, url, enabled, created_at FROM feeds WHERE enabled = TRUE ORDER BY id DESC")
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var feeds []*Feed
@@ -176,7 +158,7 @@ func (s *FeedService) List(ctx context.Context) ([]*Feed, error) {
 }
 
 func (s *FeedService) GetByID(ctx context.Context, id int64) (*Feed, error) {
-	row := s.db.QueryRowContext(ctx, "SELECT id, url, enabled, created_at FROM feeds WHERE id = ?", id)
+	row := s.db.QueryRowContext(ctx, "SELECT id, url, enabled, created_at FROM feeds WHERE id = $1", id)
 	f := &Feed{}
 	if err := row.Scan(&f.ID, &f.URL, &f.Enabled, &f.CreatedAt); err != nil {
 		return nil, err

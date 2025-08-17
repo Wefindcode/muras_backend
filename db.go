@@ -55,7 +55,7 @@ func ensureDefaultAdmin(db DB, cfg Config) error {
 		return err
 	}
 	var id int64
-	row := db.QueryRowContext(context.Background(), "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, TRUE) RETURNING id", cfg.DefaultAdmin, hash)
+	row := db.QueryRowContext(context.Background(), "INSERT INTO users (email, password_hash, is_admin) VALUES ($1, $2, TRUE) RETURNING id", cfg.DefaultAdmin, hash)
 	if err := row.Scan(&id); err != nil { return err }
 	return nil
 }

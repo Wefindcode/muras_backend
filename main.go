@@ -13,6 +13,23 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+func waitForDatabase(db *DBAdapter, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	t := time.NewTicker(500 * time.Millisecond)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+			if err := db.inner.Ping(); err == nil {
+				return nil
+			}
+		}
+	}
+}
+
 func main() {
 	cfg := loadConfig()
 
@@ -23,6 +40,9 @@ func main() {
 	defer dbConn.Close()
 
 	db := NewDBAdapter(dbConn)
+	if err := waitForDatabase(db, 30*time.Second); err != nil {
+		log.Fatalf("database not ready: %v", err)
+	}
 
 	if err := migrate(db); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
